@@ -1,0 +1,45 @@
+name: Auto Versioning
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  increment-version:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Identidade do CI Bot
+        run: |
+          git config --global user.name "CI Bot"
+          git config --global user.email "ci-bot@users.noreply.github.com"
+
+      - name: Ler e Incrementar Versão
+        run: |
+          CURRENT_VERSION=$(cat version.txt | tr -d '[:space:]')
+          echo "Versão atual: $CURRENT_VERSION"
+          
+          # Remove o prefixo 'v' se houver e separa os componentes (major.minor.patch)
+          CLEAN_VERSION=${CURRENT_VERSION#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CLEAN_VERSION"
+          
+          # Incrementa o último dígito (patch)
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="v$MAJOR.$MINOR.$NEW_PATCH"
+          
+          echo "Nova versão calculada: $NEW_VERSION"
+          echo "$NEW_VERSION" > version.txt
+
+      - name: Commit e Push da Nova Versão
+        run: |
+          git status
+          git add version.txt
+          git commit -m "chore: incremento automático de versão para $(cat version.txt) [skip ci]"
+          git push
